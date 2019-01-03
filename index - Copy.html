@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Hello!</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1">
+    
+    <!-- import the webpage's stylesheet -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/font-awesome.min.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+    
+    <!-- AR libs -->
+    <script src="js/aframe.min.js"></script>
+    <script src="js/aframe-ar.js"> </script>
+    
+    <script src="js/jquery-1.9.1.min.js"></script>
+    <script src="js/merge-images.js"></script>
+    
+    <!-- interactive drag and resize -->
+    <script src="js/interact.min.js"></script>
+  
+    <script src="js/xhtml2canvas.min.js"></script>
+    <script src="js/html-screen-capture.js"></script>
+  </head>  
+  
+  <body>
+
+        <div id="myModal" class="modal" data-html2canvas-ignore>
+          <span class="close">&times;</span>
+          <img id="myImg" class="modal-content" />
+          <button class="btn btn-info btn-save" id="save"><i class="fa fa-save"></i> Save</button>
+        </div>
+
+        <div class="wrapper" data-html2canvas-ignore>
+          <button class="btn btn-lg btn-danger center" onclick="capture(event);"> 
+                <i class="fa fa-camera"></i> Capture
+          </button>
+        </div>
+
+        <div class="switch_btn" data-html2canvas-ignore>
+          <button class="btn btn-lg btn-info center" onclick="switch_camera(event);"> 
+                <i class="fa fa-refresh"></i>
+          </button>
+        </div>
+    
+        <a-scene arjs="sourceType: webcam; debugUIEnabled: false;" screenshot="width: 640; height: 320" vr-mode-ui="enabled: false" class="ascene">
+            <a-entity camera="active: true" position="0 0 0" data-aframe-default-camera id="camera"></a-entity>
+        </a-scene>
+
+        <div class="mask_container">
+            <div class="resize_drag" id="resize_drag">
+              <div class="btn_scale"></div>
+              <div class="btn_rotate"></div>
+            </div>
+        </div>
+
+        <img class="camera_image" id="camera_image"/>
+
+    <script>
+      
+        var x = htmlScreenCaptureJs.capture(
+            htmlScreenCaptureJs.OutputType.STRING,
+            window.document, {
+                'imageFormatForDataUrl': 'image/jpeg',
+                'imageQualityForDataUrl': 1.0
+            }
+        );
+        console.log(x);
+        
+        var dataURL = '';
+
+
+        $("#resize_drag").mouseover(function(){
+          $(".btn_scale").css("display", "block");
+          $(".btn_rotate").css("display", "block");
+        });
+
+        $("#resize_drag").mouseout(function(){
+          $(".btn_scale").css("display", "none");
+          $(".btn_rotate").css("display", "none");
+        });
+
+        // screenshot
+        function capture(event){
+            event.preventDefault();
+
+            // a temp image from the camera
+            let frame = getARVideo("video", "png");
+            var hidden_img = document.getElementById("camera_image");
+            //hidden_img.setAttribute("class", "camera_image");
+            hidden_img.setAttribute("src", frame.dataUri);
+            hidden_img.setAttribute("width", frame.width);
+            hidden_img.setAttribute("height", frame.height);
+            hidden_img.setAttribute("style","display:block;");
+            // render body => canvas
+            html2canvas(document.body, {logging:false, onclone: function(doc) {
+              //document.getElementById("camera_image").style.display="block";
+            }}).then(function(canvas) {
+                dataURL = canvas.toDataURL("image/png");
+
+                // set image to display on the modal
+                var image = document.getElementById('myImg');
+                image.setAttribute('src', dataURL);
+                //image.setAttribute("width", frame.width);
+                //image.setAttribute("height", frame.height);
+                var modal = document.getElementById('myModal');
+                modal.style.display = "block";
+                var span = document.getElementsByClassName("close")[0];
+                span.onclick = function() { 
+                  modal.style.display = "none";
+                }
+
+                // remove the temp image
+                hidden_img.removeAttribute("src");
+                hidden_img.setAttribute("style","display:none;");
+            });
+
+            // remove created video tags
+            $('video:not(first-child)').remove();
+        }
+
+
+        //save the screenshot
+        document.getElementById("save").addEventListener("click", function(e){
+          var a  = document.createElement('a');
+          a.href = dataURL;
+          a.download = 'screenshot-' + document.title.toLowerCase() + '-' + Date.now() + '.png';
+          a.click();
+        });
+
+        /*
+        function resizeCanvas(origCanvas, width, height) {
+            let resizedCanvas = document.createElement("canvas");
+            let resizedContext = resizedCanvas.getContext("2d");
+
+            resizedCanvas.height = height;
+            resizedCanvas.width = width;
+
+            if (width > height) {
+                // Landscape
+                resizedContext.drawImage(origCanvas, 0, 0, width, height);
+            } else {
+                // Portrait
+                var scale = height / width;
+                var scaledHeight = origCanvas.width * scale;
+                var scaledWidth = origCanvas.height * scale;
+                var marginLeft = ( origCanvas.width - scaledWidth) / 2;
+                resizedContext.drawImage(origCanvas, marginLeft, 0, scaledWidth, scaledHeight);
+            }
+
+            return resizedCanvas.toDataURL();
+        }*/
+
+        // get an base64 image from the camera
+        function getARVideo(video, format) {
+            video = document.querySelector(video);
+
+            var canvas = document.createElement("canvas");
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+
+            return {dataUri: canvas.toDataURL('image/' + format), width:canvas.width, height:canvas.height};
+        };
+
+        // foreground event listeners
+        function dragMoveListener (event) {
+          var target = event.target,
+              // keep the dragged position in the data-x/data-y attributes
+              x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx,
+              y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
+
+          // translate the element
+          target.style.webkitTransform = target.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
+
+          // update the posiion attributes
+          target.setAttribute('data-x', x);
+          target.setAttribute('data-y', y);
+        }
+        window.dragMoveListener = dragMoveListener;
+      
+        // resize and drag mask
+        interact('.resize_drag')
+          .draggable({
+              inertia: true,
+              onmove: window.dragMoveListener,
+              restrict: {
+                restriction: 'parent',
+                elementRect: { top: 0, left: 0, bottom: 1, right: 1 }
+              },
+          })
+          .gesturable({
+              onstart: function (event) {
+                
+              },
+              onmove: function (event) {
+                var target = event.target;
+                angle += event.da;
+                console.log(angle);
+
+                target.style.webkitTransform =
+                target.style.transform =
+                  'rotate(' + angle + 'deg)';
+              },
+              onend: function (event) {
+                
+              }
+          })
+          .resizable({
+              // resize from all edges and corners
+              preserveAspectRatio: true,
+              edges: { 
+                      left: '.btn_scale',
+                      right: '.btn_scale',
+                      bottom: '.btn_scale',
+                      top: '.btn_scale'
+              },
+
+              // keep the edges inside the parent
+              restrictEdges: {
+                outer: 'parent',
+                endOnly: true,
+              },
+
+              // minimum size
+              restrictSize: {
+                min: { width: 100, height:100 },
+              },
+
+              inertia: true,
+          }).on('resizemove', function (event) {
+              var target = event.target,
+                  x = (parseFloat(target.getAttribute('data-x')) || 0),
+                  y = (parseFloat(target.getAttribute('data-y')) || 0);
+
+              // update the element's style
+              target.style.width  = event.rect.width + 'px';
+              target.style.height = event.rect.height + 'px';
+
+              // translate when resizing from top or left edges
+              x += event.deltaRect.left;
+              y += event.deltaRect.top;
+
+              target.style.webkitTransform = target.style.transform =
+                  'translate(' + x + 'px,' + y + 'px)';
+
+              target.setAttribute('data-x', x);
+              target.setAttribute('data-y', y);
+              //target.textContent = Math.round(event.rect.width) + '\u00D7' + Math.round(event.rect.height);
+        });
+
+
+        var is_front = false;
+        function switch_camera(event){
+          is_front = ! is_front;
+          var video = document.querySelector('video');
+          navigator.mediaDevices.enumerateDevices().then(devices => {
+                  var videoDevices = [0,0];
+                  var videoDeviceIndex = 0;
+                  devices.forEach(function(device) {
+                      //console.log(device.kind + ": " + device.label +  " id = " + device.deviceId);
+                      if (device.kind == "videoinput") {  
+                        videoDevices[videoDeviceIndex++] =  device.deviceId;    
+                      }
+                  });
+
+                  var constraints =  {//width: { min: 1024, ideal: 1280, max: 1920 },
+                  //height: { min: 776, ideal: 720, max: 1080 },
+                                    deviceId: { exact: is_front?videoDevices[1]:videoDevices[0]} 
+                  };
+                return navigator.mediaDevices.getUserMedia({ video: constraints });
+
+              }).then(stream => {
+                  if (window.webkitURL) {
+                    video.src = window.webkitURL.createObjectURL(stream);
+                    localMediaStream = stream;
+                  } else if (video.mozSrcObject !== undefined) {
+                    video.mozSrcObject = stream;
+                  } else if (video.srcObject !== undefined) {
+                    video.srcObject = stream;
+                  } else {
+                    video.src = stream;
+                  }})
+                .catch(e => {
+                  console.error(e);
+                  //console.log('lll');
+                });
+
+        }
+        /*
+        // Switch camera
+        var videoElement = document.querySelector('video');
+        var videoSelect = document.querySelector('select#videoSource');
+
+        navigator.mediaDevices.enumerateDevices().then(gotDevices).then(getStream).catch(handleError);
+        
+        function gotDevices(deviceInfos) {
+          for (var i = 0; i !== deviceInfos.length; ++i) {
+            var deviceInfo = deviceInfos[i];
+            if (deviceInfo.kind === 'videoinput') {
+                
+            } else {
+              console.log('Found one other kind of source/device: ', deviceInfo);
+            }
+          }
+        }
+
+        function getStream(device_id) {
+            if (window.stream) {
+              window.stream.getTracks().forEach(function(track) {
+                track.stop();
+              });
+            }
+
+            var constraints = {
+              video: {
+                deviceId: {exact: videoSelect.value}
+              }
+            };
+
+            navigator.mediaDevices.getUserMedia(constraints).then(gotStream).catch(handleError);
+        }
+
+        function gotStream(stream) {
+          window.stream = stream; // make stream available to console
+          videoElement.srcObject = stream;
+        }
+
+        function handleError(error) {
+          console.log('Error: ', error);
+        }
+        */
+    </script>
+  </body>
+</html>

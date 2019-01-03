@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Camera AR</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="icon" href="assets/favicon.png">
+
+    <!-- import the webpage's stylesheet -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/font-awesome.min.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+    
+    <!-- AR libs -->
+    <script src="js/aframe.min.js"></script>
+    <script src="js/aframe-ar.js"> </script>
+    
+    <script src="js/jquery-1.9.1.min.js"></script>
+    <script src="js/hammer.js"></script>
+    
+    <!-- interactive drag and resize -->
+    <!-- <script src="js/interact.min.js"></script> -->
+    <script src="js/FileSaver.js"></script>
+  
+    <script src="js/html2canvas.js"></script>
+  </head>  
+  <body>
+    <div>
+        <a-scene arjs="sourceType: webcam; debugUIEnabled: false;" vr-mode-ui="enabled: false" class="ascene">
+            <a-entity camera="active: true" position="0 0 0" data-aframe-default-camera id="camera"></a-entity>
+        </a-scene>
+
+        <div class="mask_container">
+            <div class="resize_drag" id="resize_drag"></div>
+        </div>
+        
+        <div id="myModal" class="modal" data-html2canvas-ignore>
+          <span class="close">&times;</span>
+          <img id="myImg" class="modal-content" />
+          <a class="btn btn-info btn-save" id="save"><i class="fa fa-save"></i> Save</a>
+        </div>
+
+        <div class="capture-btn" data-html2canvas-ignore>
+          <span class="btn-image center" onclick="capture(event);"></span>
+        </div>
+
+        <div class="switch_btn" data-html2canvas-ignore>
+          <span class="btn-rotate center" onclick="switch_camera(event);"> 
+          </span>
+        </div>
+        <canvas id="mycanvas" style="display: none;"></canvas>
+    </div>
+
+    <script>
+        
+        var dataURL = '';
+        // get an base64 image from the camera
+        function getARVideo(video) {
+            video = document.querySelector(video);
+
+            var canvas = document.getElementById('mycanvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            canvas.getContext('2d').drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+            //ctx.drawImage(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
+            //return canvas;
+        };
+
+        // get a-scene canvas's width & height
+        function getARCanvasDim(){
+          var can = document.getElementsByClassName('a-canvas')[0];
+          return {width:can.offsetWidth, height:can.offsetHeight};
+        }
+        
+        // screenshot
+        function capture(event){
+            event.preventDefault();
+            
+            var frame = getARVideo("video");
+
+            html2canvas(document.body, {logging:false, width:getARCanvasDim().width, height:getARCanvasDim().height, onclone:function(doc){
+              var mycanvas= $(doc).find('#mycanvas')[0];
+              mycanvas.setAttribute("style", "display:block;z-index:32;width:100%;height:100%;");
+
+            }}).then(function(canvas) {
+                dataURL = canvas.toDataURL("image/png");
+
+                // set image to display on the modal
+                var image = document.getElementById('myImg');
+                image.setAttribute('src', dataURL);
+                //image.setAttribute("width", frame.width);
+                //image.setAttribute("height", frame.height);
+
+                var modal = document.getElementById('myModal');
+                modal.style.display = "block";
+                var span = document.getElementsByClassName("close")[0];
+                span.onclick = function() { 
+                  modal.style.display = "none";
+                }
+
+            });
+
+            // remove created video tags
+            $('video:not(first-child)').slice(1).remove();
+        }
+
+
+        //save the screenshot
+        document.getElementById("save").addEventListener("click", function(e){
+          var filename = 'screenshot-' + document.title.toLowerCase() + '-' + Date.now() + '.png';
+          var blob = new Blob([dataURItoBlob(dataURL)], {type: "image/jpeg"});
+          saveAs(blob, filename);
+        });
+
+        function dataURItoBlob(dataURI) {
+          // convert base64 to raw binary data held in a string
+          // doesn't handle URLEncoded DataURIs - see SO answer #6850276 for code that does this
+          var byteString = atob(dataURI.split(',')[1]);
+
+          // separate out the mime component
+          var mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0]
+
+          // write the bytes of the string to an ArrayBuffer
+          var ab = new ArrayBuffer(byteString.length);
+
+          // create a view into the buffer
+          var ia = new Uint8Array(ab);
+
+          // set the bytes of the buffer to the correct values
+          for (var i = 0; i < byteString.length; i++) {
+              ia[i] = byteString.charCodeAt(i);
+          }
+
+          // write the ArrayBuffer to a blob, and you're done
+          var blob = new Blob([ab], {type: mimeString});
+          return blob;
+
+        }
+
+        document.body.addEventListener('touchmove', function(event) {
+            event.preventDefault();
+          }, false);
+
+          var stage = document.getElementById('resize_drag');
+          var mc = new Hammer.Manager(stage);
+
+          var rotate = new Hammer.Rotate();
+          var pinch = new Hammer.Pinch();
+          var pan = new Hammer.Pan();
+
+          mc.add([pinch, pan, rotate]);
+          mc.get('pinch').set({ enable: true })
+          mc.get('rotate').set({ enable: true })
+
+          var adjustScale = 1;
+          var currentScale = null;
+          var currentRotation = null;
+          var adjustRotation = 0;
+
+          var adjustDeltaX = 0;
+          var adjustDeltaY = 0;
+          var currentDeltaX = null;
+          var currentDeltaY = null;
+
+          mc.on("pinch pan rotate", function(e) {
+            var transforms = [];
+            // var rotation = currentRotation + Math.round(e.rotation);
+
+            currentRotation = adjustRotation + Math.round(e.rotation);
+            currentScale = adjustScale * e.scale;
+            currentDeltaX = adjustDeltaX + (e.deltaX / currentScale);
+            currentDeltaY = adjustDeltaY + (e.deltaY / currentScale);
+
+            transforms.push('scale(' + currentScale + ')');
+            transforms.push('translate(' + currentDeltaX + 'px,' + currentDeltaY + 'px)');
+            transforms.push('rotate('+currentRotation+'deg)');
+            stage.style.transform = transforms.join(' ');
+
+          });
+
+          mc.on("panend pinchend rotateend", function(e) {
+            adjustScale = currentScale;
+            adjustRotation = currentRotation;
+            adjustDeltaX = currentDeltaX;
+            adjustDeltaY = currentDeltaY;
+
+          });
+
+        // toggle camera back/front if available
+        var is_front = false;
+        function switch_camera(event){
+          is_front = ! is_front;
+          var video = document.querySelector('video');
+          navigator.mediaDevices.enumerateDevices().then(devices => {
+                  var videoDevices = [0,0];
+                  var videoDeviceIndex = 0;
+                  devices.forEach(function(device) {
+                      //console.log(device.kind + ": " + device.label +  " id = " + device.deviceId);
+                      if (device.kind == "videoinput") {  
+                        videoDevices[videoDeviceIndex++] =  device.deviceId;    
+                      }
+                  });
+                  window.xx = videoDevices;
+                  if($.inArray(0, videoDevices)==1){
+                    alert("Only single device is available!");
+                    is_front = false;
+                  }
+
+                  var constraints =  {//width: { min: 1024, ideal: 1280, max: 1920 },
+                                      //height: { min: 776, ideal: 720, max: 1080 },
+                                    deviceId: { exact: is_front?videoDevices[1]:videoDevices[0] } 
+                  };
+
+                return navigator.mediaDevices.getUserMedia({ video: constraints });
+
+              }).then(stream => {
+                  if (video.mozSrcObject !== undefined) {
+                    video.mozSrcObject = stream;
+                  } else if (video.srcObject !== undefined) {
+                    video.srcObject = stream;
+                  } else {
+                    video.src = stream;
+                  }})
+                .catch(e => {
+                  console.error(e);
+                });
+        }
+    </script>
+  </body>
+</html>

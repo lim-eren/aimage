@@ -1,0 +1,126 @@
+/* CSS files add styling rules to your content */
+
+body{
+  margin: 0 auto;
+  width:100%;
+  height:100%;
+}
+
+h1 {
+  font-style: italic;
+  color: #373fff;
+}
+.center{
+  display:inline-block;
+}
+
+.capture-btn{
+  position:fixed; 
+  top:80%; 
+  left: 0;
+  right: 0;
+  width:100%; 
+  z-index:31; 
+  text-align:center;
+}
+
+.switch_btn{
+  position:fixed; 
+  top:5%;
+  right:10%; 
+  width:100%; 
+  z-index:31; 
+  text-align:right;
+}
+
+.modal {
+  display: none; /* Hidden by default */
+  position: fixed; /* Stay in place */
+  z-index: 32; /* Sit on top */
+  left: 0;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+  background-color: rgb(0,0,0); /* Fallback color */
+  background-color: rgba(0,0,0,0.9); /* Black w/ opacity */
+  text-align:center;
+}
+
+/* Modal Content (image) */
+.modal-content {
+  display: block;
+  width: 100%;
+}
+
+.btn-save{
+  position: absolute;
+  bottom:5%;
+}
+/* The Close Button */
+.close {
+  position: absolute;
+  top: 5%;
+  right: 10%;
+  color: black;
+  font-size: 40px;
+  font-weight: bold;
+  transition: 0.3s;
+  z-index: 33;
+}
+
+.close:hover,
+.close:focus {
+  color: #ff00ff;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.xxresize_drag{
+  width:300px;
+  height: 300px;
+  background:url('../assets/mask_hacker.png');
+ -moz-background-size:100% 100%;
+  -webkit-background-size:100% 100%;
+  background-size:100% 100%;
+}
+.resize_drag{
+  width:500px;
+  height: 500px;
+  z-index: 999;
+}
+.btn-image{
+  background:url(../assets/shoot.png) no-repeat;
+  background-size: 80px 80px;
+  -moz-background-size:80px 80px;
+  -webkit-background-size:80px 80px;
+  cursor:pointer;
+  border:none;
+  width:80px;
+  height:80px;
+}
+.btn-rotate{
+  background:url(../assets/rotate_cam.png) no-repeat;
+  background-size: 40px 40px;
+  -moz-background-size:40px 40px;
+  -webkit-background-size:40px 40px;
+  cursor:pointer;
+  border:none;
+  width:40px;
+  height:40px;
+}
+.mask_container{
+  width:100%;
+  height:100%;
+  position:fixed;
+  top:0;
+  left:0;
+  z-index:30;
+}
+
+#mycanvas{
+  margin: 0;
+}
+video{
+  width: 100%;
+  height: 100%;
+}
